@@ -1,7 +1,7 @@
 from setuptools import setup
 setup(
     name='markdown-mdantic',
-    version='1.0',
+    version='1.1',
     author='Xiangyu Zhu',
     author_email='frefreak.zxy@gmail.com',
     description='Python-Markdown extension for rendering pydantic BaseModel as table',

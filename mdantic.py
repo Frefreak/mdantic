@@ -34,7 +34,7 @@ def analyze(model):
         return None
     cls = getattr(mod, attr)
 
-    structs = []
+    structs = {}
     mk_struct(cls, structs)
     return structs
 
@@ -44,29 +44,31 @@ Field = namedtuple("Field", "key type required desc default")
 
 def mk_struct(cls, structs):
     this_struct = []
-    structs.append(this_struct)
+    structs[cls.__name__] = this_struct
     for _, f in cls.__fields__.items():
+        ty = f.type_.__name__ if hasattr(f.type_, '__name__') else str(f.type_)
         this_struct.append(
             Field(
                 f.alias,
-                f.type_.__name__,
+                ty,
                 str(f.required),
                 str(f.field_info.description),
                 str(f.default),
             )
         )
-        if isinstance(f.type_, BaseModel):
-            mk_struct(f.type_, structs)
+        if hasattr(f.type_, '__mro__'):
+            if BaseModel in f.type_.__mro__:
+                mk_struct(f.type_, structs)
 
 
 def fmt_tab(structs):
-    tabs = []
+    tabs = {}
     field_names = ["key", "type", "required", "description", "default"]
-    for struct in structs:
+    for cls, struct in structs.items():
         tab = []
         for f in struct:
             tab.append(list(f))
-        tabs.append(tabulate.tabulate(tab, headers=field_names, tablefmt="github"))
+        tabs[cls] = tabulate.tabulate(tab, headers=field_names, tablefmt="github")
     return tabs
 
 
@@ -98,8 +100,10 @@ class IncludePreprocessor(Preprocessor):
                     )
                     continue
                 tabs = fmt_tab(structs)
-                all_tabs = '\n'.join([str(tab) for tab in tabs])
-                lines = lines[:i] + [all_tabs] + lines[i+1:]
+                table_str = ''
+                for cls, tab in tabs.items():
+                    table_str += '\n' + f'**{cls}**' + '\n\n' + str(tab) + '\n'
+                lines = lines[:i] + [table_str] + lines[i+1:]
 
         return lines
 
