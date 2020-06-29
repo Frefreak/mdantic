@@ -21,7 +21,7 @@ Currently this module has only one config option: `init_code` which will execute
 
 example:
 
-```markdown
+```yaml
 markdown_extensions:
     markdown_mdantic:
         init_code: |
