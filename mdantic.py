@@ -1,4 +1,6 @@
+from enum import Enum
 import importlib
+import inspect
 import re
 from collections import namedtuple
 
@@ -6,6 +8,7 @@ import tabulate
 from markdown.extensions import Extension
 from markdown.preprocessors import Preprocessor
 from pydantic import BaseModel
+from pydantic.fields import display_as_type
 
 
 class MarkdownInclude(Extension):
@@ -46,14 +49,25 @@ def mk_struct(cls, structs):
     this_struct = []
     structs[cls.__name__] = this_struct
     for _, f in cls.__fields__.items():
-        ty = f.type_.__name__ if hasattr(f.type_, '__name__') else str(f.type_)
+        ty = f.type_
+        description = f.field_info.description or ''
+        default = str(f.default or '')
+        if inspect.isclass(ty):
+            if issubclass(ty, Enum):
+                description += f'({ty.__name__})'
+        if hasattr(f, '_type_display'):
+            ty = f._type_display()
+        elif hasattr(ty, '__name__'):
+            ty = ty.__name__
+        else:
+            ty = str(ty)
         this_struct.append(
             Field(
                 f.alias,
                 ty,
                 str(f.required),
-                str(f.field_info.description),
-                str(f.default),
+                description,
+                default,
             )
         )
         if hasattr(f.type_, '__mro__'):
