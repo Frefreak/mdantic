@@ -4,7 +4,7 @@ This is an extension to [Python-Markdown](https://python-markdown.github.io/). I
 
 The code itself is a direct modification to [markdown-include](https://github.com/cmacmackin/markdown-include) since they do similar things.
 
-Notice: This project is still WIP and need more examples to handle most of the possible BaseModel models.
+Notice: This project is still WIP and need more examples to adapt to most of the possible BaseModel models.
 
 ## Installation
 

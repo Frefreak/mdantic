@@ -1,14 +1,14 @@
-from enum import Enum
-import importlib
-import inspect
 import re
+import inspect
+import importlib
+from enum import Enum
 from collections import namedtuple
 
 import tabulate
-from markdown.extensions import Extension
-from markdown.preprocessors import Preprocessor
 from pydantic import BaseModel
 from pydantic.fields import display_as_type
+from markdown.extensions import Extension
+from markdown.preprocessors import Preprocessor
 
 
 class MarkdownInclude(Extension):
@@ -45,32 +45,46 @@ def analyze(model):
 Field = namedtuple("Field", "key type required desc default")
 
 
+def get_related_enum(ty):
+    visited = set()
+    result = []
+    get_related_enum_helper(ty, visited, result)
+    return result
+
+
+def get_enum_values(e):
+    return [x.value for x in list(e)]
+
+
+def get_related_enum_helper(ty, visited, result):
+    visited.add(ty)
+    if inspect.isclass(ty) and issubclass(ty, Enum) and ty not in result:
+        result.append(ty)
+    if hasattr(ty, "__args__"):
+        for sub_ty in ty.__args__:
+            if sub_ty not in visited:
+                get_related_enum_helper(sub_ty, visited, result)
+
+
 def mk_struct(cls, structs):
     this_struct = []
     structs[cls.__name__] = this_struct
     for _, f in cls.__fields__.items():
         ty = f.type_
-        description = f.field_info.description or ''
-        default = str(f.default or '')
-        if inspect.isclass(ty):
-            if issubclass(ty, Enum):
-                description += f'({ty.__name__})'
-        if hasattr(f, '_type_display'):
+        description = f.field_info.description or ""
+        related_enums = get_related_enum(ty)
+        if related_enums:
+            for e in related_enums:
+                description += f"\n{e.__name__}: {get_enum_values(e)}"
+        default = str(f.default or "")
+        if hasattr(f, "_type_display"):
             ty = f._type_display()
-        elif hasattr(ty, '__name__'):
+        elif hasattr(ty, "__name__"):
             ty = ty.__name__
         else:
             ty = str(ty)
-        this_struct.append(
-            Field(
-                f.alias,
-                ty,
-                str(f.required),
-                description,
-                default,
-            )
-        )
-        if hasattr(f.type_, '__mro__'):
+        this_struct.append(Field(f.alias, ty, str(f.required), description, default,))
+        if hasattr(f.type_, "__mro__"):
             if BaseModel in f.type_.__mro__:
                 mk_struct(f.type_, structs)
 
@@ -114,10 +128,10 @@ class IncludePreprocessor(Preprocessor):
                     )
                     continue
                 tabs = fmt_tab(structs)
-                table_str = ''
+                table_str = ""
                 for cls, tab in tabs.items():
-                    table_str += '\n' + f'**{cls}**' + '\n\n' + str(tab) + '\n'
-                lines = lines[:i] + [table_str] + lines[i+1:]
+                    table_str += "\n" + f"=={cls}==" + "\n\n" + str(tab) + "\n"
+                lines = lines[:i] + [table_str] + lines[i + 1 :]
 
         return lines
 
