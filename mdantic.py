@@ -76,7 +76,7 @@ def mk_struct(cls, structs):
         if related_enums:
             for e in related_enums:
                 description += f"\n{e.__name__}: {get_enum_values(e)}"
-        default = str(f.default or "")
+        default = str(f.default if f.default is not None else "")
         if hasattr(f, "_type_display"):
             ty = f._type_display()
         elif hasattr(ty, "__name__"):
