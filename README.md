@@ -16,7 +16,13 @@ pip install markdown-mdantic
 
 ## Usage
 
-Currently this module has only one config option: `init_code` which will execute **any** python code in the environment when its `__init__` is called. In this way you can do something like adding system path, django setup etc, before run.
+Currently this module has only one config option: `init_code` which will
+execute **any** python code in the environment when its `__init__` is called.
+In this way you can do something like adding system path, django setup etc,
+before run.
+
+**Note**: Please note that the `init_code` thing is a huge security issue if
+you run that with untrusted input. Use it with caution!
 
 
 ### mkdocs

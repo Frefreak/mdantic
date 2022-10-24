@@ -6,12 +6,11 @@ from collections import namedtuple
 
 import tabulate
 from pydantic import BaseModel
-from pydantic.fields import display_as_type
 from markdown.extensions import Extension
 from markdown.preprocessors import Preprocessor
 
 
-class MarkdownInclude(Extension):
+class Mdantic(Extension):
     def __init__(self, configs=None):
         if configs is None:
             configs = {}
@@ -23,16 +22,21 @@ class MarkdownInclude(Extension):
         super().__init__()
 
     def extendMarkdown(self, md):
-        md.preprocessors.add(
-            "include", IncludePreprocessor(md, self.getConfigs()), "_begin"
+        md.preprocessors.register(
+            MdanticPreprocessor(md, self.getConfigs()), "mdantic", 100
         )
 
 
 def analyze(model):
-    paths = model.split(".")
-    module = ".".join(paths[:-1])
-    attr = paths[-1]
-    mod = importlib.import_module(module)
+    paths = model.rsplit(".", 1)
+    if len(paths) != 2:
+        return None
+    module = paths[0]
+    attr = paths[1]
+    try:
+        mod = importlib.import_module(module)
+    except ModuleNotFoundError:
+        return None
     if not hasattr(mod, attr):
         return None
     cls = getattr(mod, attr)
@@ -61,7 +65,7 @@ def get_related_enum_helper(ty, visited, result):
     if inspect.isclass(ty) and issubclass(ty, Enum) and ty not in result:
         result.append(ty)
     if hasattr(ty, "__args__"):
-        for sub_ty in ty.__args__:
+        for sub_ty in getattr(ty, "__args__"):
             if sub_ty not in visited:
                 get_related_enum_helper(sub_ty, visited, result)
 
@@ -83,7 +87,15 @@ def mk_struct(cls, structs):
             ty = ty.__name__
         else:
             ty = str(ty)
-        this_struct.append(Field(f.alias, ty, str(f.required), description, default,))
+        this_struct.append(
+            Field(
+                f.alias,
+                ty,
+                str(f.required),
+                description,
+                default,
+            )
+        )
         if hasattr(f.type_, "__mro__"):
             if BaseModel in f.type_.__mro__:
                 mk_struct(f.type_, structs)
@@ -100,7 +112,7 @@ def fmt_tab(structs):
     return tabs
 
 
-class IncludePreprocessor(Preprocessor):
+class MdanticPreprocessor(Preprocessor):
     """
     This provides an "include" function for Markdown, similar to that found in
     LaTeX (also the C pre-processor and Fortran). The syntax is {!filename!},
@@ -111,30 +123,30 @@ class IncludePreprocessor(Preprocessor):
     """
 
     def __init__(self, md, config):
-        super(IncludePreprocessor, self).__init__(md)
+        super(MdanticPreprocessor, self).__init__(md)
         self.init_code = config["init_code"]
         if self.init_code:
             exec(self.init_code)
 
     def run(self, lines):
         for i, l in enumerate(lines):
-            g = re.match("^\$pydantic: (.*)$", l)
+            g = re.match(r"^\$pydantic: (.*)$", l)
             if g:
                 cls_name = g.group(1)
                 structs = analyze(cls_name)
                 if structs is None:
                     print(
-                        f"warning: mdantic pattern detected but failed to import module: {cls_name}"
+                        f"warning: mdantic pattern detected but failed to process or import: {cls_name}"
                     )
                     continue
                 tabs = fmt_tab(structs)
                 table_str = ""
                 for cls, tab in tabs.items():
-                    table_str += "\n" + f"=={cls}==" + "\n\n" + str(tab) + "\n"
+                    table_str += "\n" + f"**{cls}**" + "\n\n" + str(tab) + "\n"
                 lines = lines[:i] + [table_str] + lines[i + 1 :]
 
         return lines
 
 
-def makeExtension(*args, **kwargs):
-    return MarkdownInclude(kwargs)
+def makeExtension(*_, **kwargs):
+    return Mdantic(kwargs)
