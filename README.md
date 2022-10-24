@@ -31,7 +31,7 @@ example:
 
 ```yaml
 markdown_extensions:
-    markdown_mdantic:
+    mdantic:
         init_code: |
             import os
             import django
@@ -39,9 +39,16 @@ markdown_extensions:
             django.setup()
 ```
 
+Some time ago the extension name used here should be `markdown_mdantic`, but
+after some point it seems there will only be one file after installation in
+python's site-packages directory (mdantic.py) so now we should use the name
+`mdantic`.
+
 ### reference the model
 
-Each reference must be in one line, starts with `$pydantic: ` (notice the single space after the colon), following the model import path which looks lik `a.b.c.D` where `D` is the model class itself (BaseModel).
+Each reference must be in one line, starts with `$pydantic: ` (notice the
+single space after the colon), following the model import path which looks
+lik `a.b.c.D` where `D` is the model class itself (which is subclass of `BaseModel`).
 
 ```markdown
 **params**:
