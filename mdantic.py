@@ -16,6 +16,8 @@ class Mdantic(Extension):
             configs = {}
         self.config = {
             "init_code": ["", "python code to run when initializing"],
+            "columns": ["key, type, required, description, default",
+"Columns to use in table, comma separated"]
         }
         for key, value in configs.items():
             self.setConfig(key, value)
@@ -46,7 +48,7 @@ def analyze(model):
     return structs
 
 
-Field = namedtuple("Field", "key type required desc default")
+Field = namedtuple("Field", "key type required description default")
 
 
 def get_related_enum(ty):
@@ -79,7 +81,7 @@ def mk_struct(cls, structs):
         related_enums = get_related_enum(ty)
         if related_enums:
             for e in related_enums:
-                description += f"\n{e.__name__}: {get_enum_values(e)}"
+                description += f"</br>{e.__name__}: {get_enum_values(e)}"
         default = str(f.default if f.default is not None else "")
         if hasattr(f, "_type_display"):
             ty = f._type_display()
@@ -101,14 +103,13 @@ def mk_struct(cls, structs):
                 mk_struct(f.type_, structs)
 
 
-def fmt_tab(structs):
+def fmt_tab(structs, columns):
     tabs = {}
-    field_names = ["key", "type", "required", "description", "default"]
     for cls, struct in structs.items():
         tab = []
         for f in struct:
-            tab.append(list(f))
-        tabs[cls] = tabulate.tabulate(tab, headers=field_names, tablefmt="github")
+            tab.append([getattr(f,name) for name in columns])
+        tabs[cls] = tabulate.tabulate(tab, headers=columns, tablefmt="github")
     return tabs
 
 
@@ -127,6 +128,7 @@ class MdanticPreprocessor(Preprocessor):
         self.init_code = config["init_code"]
         if self.init_code:
             exec(self.init_code)
+        self.columns = config["columns"].replace(" ","").split(",")
 
     def run(self, lines):
         for i, l in enumerate(lines):
@@ -139,7 +141,7 @@ class MdanticPreprocessor(Preprocessor):
                         f"warning: mdantic pattern detected but failed to process or import: {cls_name}"
                     )
                     continue
-                tabs = fmt_tab(structs)
+                tabs = fmt_tab(structs, self.columns)
                 table_str = ""
                 for cls, tab in tabs.items():
                     table_str += "\n" + f"**{cls}**" + "\n\n" + str(tab) + "\n"
