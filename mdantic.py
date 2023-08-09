@@ -16,8 +16,10 @@ class Mdantic(Extension):
             configs = {}
         self.config = {
             "init_code": ["", "python code to run when initializing"],
-            "columns": [["key", "type", "required", "description", "default"],
-                        "Columns to use in table, comma separated list"]
+            "columns": [
+                ["key", "type", "required", "description", "default"],
+                "Columns to use in table, comma separated list",
+            ],
         }
         for key, value in configs.items():
             self.setConfig(key, value)
@@ -108,7 +110,7 @@ def fmt_tab(structs, columns):
     for cls, struct in structs.items():
         tab = []
         for f in struct:
-            tab.append([getattr(f,name) for name in columns])
+            tab.append([getattr(f, name) for name in columns])
         tabs[cls] = tabulate.tabulate(tab, headers=columns, tablefmt="github")
     return tabs
 
