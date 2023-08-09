@@ -25,7 +25,7 @@ before run.
 you run that with untrusted input. Use it with caution!
 
 `columns` is a comma-separated list of table columns to use in each table.
-The default is to use all columns `key, type, required, description, default`.
+The default is to use all columns `["key", "type", "required", "description", "default"]`.
 
 
 ### mkdocs
@@ -64,4 +64,4 @@ $pydantic: src.test.TestGetSchema
 ### customize output
 
 The resulting table is rendered using [tabulate](https://pypi.org/project/tabulate/), in `github` style. The `columns` config option can be used to
-restrict the columns to show. Styling is cannot be changed at the moment. PR is welcomed.
+restrict the columns to show. Styling cannot be changed at the moment. PR is welcomed.

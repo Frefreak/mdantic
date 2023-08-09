@@ -16,8 +16,8 @@ class Mdantic(Extension):
             configs = {}
         self.config = {
             "init_code": ["", "python code to run when initializing"],
-            "columns": ["key, type, required, description, default",
-"Columns to use in table, comma separated"]
+            "columns": [["key", "type", "required", "description", "default"],
+                        "Columns to use in table, comma separated list"]
         }
         for key, value in configs.items():
             self.setConfig(key, value)
@@ -128,7 +128,7 @@ class MdanticPreprocessor(Preprocessor):
         self.init_code = config["init_code"]
         if self.init_code:
             exec(self.init_code)
-        self.columns = config["columns"].replace(" ","").split(",")
+        self.columns = config["columns"]
 
     def run(self, lines):
         for i, l in enumerate(lines):
