@@ -40,7 +40,7 @@ markdown_extensions:
             import django
             os.environ.setdefault("DJANGO_SETTINGS_MODULE", "conf.default")
             django.setup()
-    columns: [key, type, required, default]
+        columns: [key, type, required, default]
 ```
 
 Some time ago the extension name used here should be `markdown_mdantic`, but
