@@ -3,9 +3,11 @@ import inspect
 import importlib
 from enum import Enum
 from collections import namedtuple
+from typing import List, Union, Dict, Optional
 
 import tabulate
 from pydantic import BaseModel
+from markdown import Markdown
 from markdown.extensions import Extension
 from markdown.preprocessors import Preprocessor
 
@@ -25,16 +27,20 @@ class Mdantic(Extension):
             self.setConfig(key, value)
         super().__init__()
 
-    def extendMarkdown(self, md):
+    def extendMarkdown(self, md: Markdown) -> None:
         md.preprocessors.register(
             MdanticPreprocessor(md, self.getConfigs()), "mdantic", 100
         )
 
 
-def analyze(model):
-    paths = model.rsplit(".", 1)
+Field = namedtuple("Field", "key type required description default")
+
+
+def analyze(cls_name: str) -> Optional[Dict[str, List[Field]]]:
+    paths = cls_name.rsplit(".", 1)
     if len(paths) != 2:
         return None
+
     module = paths[0]
     attr = paths[1]
     try:
@@ -43,14 +49,14 @@ def analyze(model):
         return None
     if not hasattr(mod, attr):
         return None
+
     cls = getattr(mod, attr)
+
+    assert issubclass(cls, BaseModel)
 
     structs = {}
     mk_struct(cls, structs)
     return structs
-
-
-Field = namedtuple("Field", "key type required description default")
 
 
 def get_related_enum(ty):
@@ -74,38 +80,44 @@ def get_related_enum_helper(ty, visited, result):
                 get_related_enum_helper(sub_ty, visited, result)
 
 
-def mk_struct(cls, structs):
+def mk_struct(cls: BaseModel, structs: Dict[str, List[Field]]) -> None:
     this_struct = []
     structs[cls.__name__] = this_struct
-    for _, f in cls.__fields__.items():
-        ty = f.type_
-        description = f.field_info.description or ""
-        related_enums = get_related_enum(ty)
+    for field_name, f in cls.model_fields.items():
+        title = f.title or field_name
+        annotation = f.annotation
+        description = "" if f.description is None else f.description
+
+        related_enums = get_related_enum(annotation)
         if related_enums:
             for e in related_enums:
                 description += f"</br>{e.__name__}: {get_enum_values(e)}"
-        default = str(f.default if f.default is not None else "")
-        if hasattr(f, "_type_display"):
-            ty = f._type_display()
-        elif hasattr(ty, "__name__"):
-            ty = ty.__name__
+
+        default = f.get_default()  # str(f.default if f.default is not None else "")
+        default = None if str(default) == "PydanticUndefined" else str(default)
+
+        if hasattr(annotation, "__origin__"):
+            ty = str(annotation)
+        elif hasattr(annotation, "__name__"):
+            ty = annotation.__name__
         else:
-            ty = str(ty)
+            ty = str(annotation)
+
         this_struct.append(
             Field(
-                f.alias,
+                title,
                 ty,
-                str(f.required),
+                str(f.is_required()),
                 description,
                 default,
             )
         )
-        if hasattr(f.type_, "__mro__"):
-            if BaseModel in f.type_.__mro__:
-                mk_struct(f.type_, structs)
+        if hasattr(annotation, "__mro__"):
+            if BaseModel in annotation.__mro__:
+                mk_struct(annotation, structs)
 
 
-def fmt_tab(structs, columns):
+def fmt_tab(structs: Dict[str, List[Field]], columns: List[str]) -> str:
     tabs = {}
     for cls, struct in structs.items():
         tab = []
@@ -125,14 +137,14 @@ class MdanticPreprocessor(Preprocessor):
     from which Markdown is being called.
     """
 
-    def __init__(self, md, config):
+    def __init__(self, md: Markdown, config):
         super(MdanticPreprocessor, self).__init__(md)
         self.init_code = config["init_code"]
         if self.init_code:
             exec(self.init_code)
         self.columns = config["columns"]
 
-    def run(self, lines):
+    def run(self, lines: List[str]):
         for i, l in enumerate(lines):
             g = re.match(r"^\$pydantic: (.*)$", l)
             if g:
