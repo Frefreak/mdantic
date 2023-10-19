@@ -3,7 +3,7 @@ import inspect
 import importlib
 from enum import Enum
 from collections import namedtuple
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, MutableSet, Type, Union
 
 import tabulate
 from pydantic import BaseModel
@@ -58,10 +58,12 @@ def analyze(cls_name: str) -> Optional[Dict[str, List[Field]]]:
     return structs
 
 
-def get_related_enum(ty):
+def get_related_enum(ty: type):
     visited = set()
     result = []
+
     get_related_enum_helper(ty, visited, result)
+
     return result
 
 
@@ -73,26 +75,30 @@ def get_related_enum_helper(ty, visited, result):
     visited.add(ty)
     if inspect.isclass(ty) and issubclass(ty, Enum) and ty not in result:
         result.append(ty)
+
     if hasattr(ty, "__args__"):
         for sub_ty in getattr(ty, "__args__"):
             if sub_ty not in visited:
                 get_related_enum_helper(sub_ty, visited, result)
 
 
-def mk_struct(cls: BaseModel, structs: Dict[str, List[Field]]) -> None:
-    this_struct = []
+def mk_struct(cls: type[BaseModel], structs: Dict[str, List[Field]]) -> None:
+    this_struct: List[Field] = []
     structs[cls.__name__] = this_struct
     for field_name, f in cls.model_fields.items():
         title = f.title or field_name
         annotation = f.annotation
         description = "" if f.description is None else f.description
 
+        if annotation is None:
+            return None
+
         related_enums = get_related_enum(annotation)
         if related_enums:
             for e in related_enums:
                 description += f"</br>{e.__name__}: {get_enum_values(e)}"
 
-        default = f.get_default()  # str(f.default if f.default is not None else "")
+        default = f.get_default()
         default = None if str(default) == "PydanticUndefined" else str(default)
 
         if hasattr(annotation, "__origin__"):
@@ -116,7 +122,7 @@ def mk_struct(cls: BaseModel, structs: Dict[str, List[Field]]) -> None:
                 mk_struct(annotation, structs)
 
 
-def fmt_tab(structs: Dict[str, List[Field]], columns: List[str]) -> str:
+def fmt_tab(structs: Dict[str, List[Field]], columns: List[str]) -> Dict[str, str]:
     tabs = {}
     for cls, struct in structs.items():
         tab = []
