@@ -10,7 +10,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/frefreak/mdantic",
     py_modules=["mdantic"],
-    install_requires=["markdown >= 3.0", "tabulate", "pydantic"],
+    install_requires=["markdown >= 3.0", "tabulate", "pydantic >= 2.0"],
     classifiers=[
         # How mature is this project? Common values are
         #   3 - Alpha

@@ -3,7 +3,7 @@ import inspect
 import importlib
 from enum import Enum
 from collections import namedtuple
-from typing import List, Union, Dict, Optional
+from typing import List, Dict, Optional
 
 import tabulate
 from pydantic import BaseModel
@@ -28,9 +28,7 @@ class Mdantic(Extension):
         super().__init__()
 
     def extendMarkdown(self, md: Markdown) -> None:
-        md.preprocessors.register(
-            MdanticPreprocessor(md, self.getConfigs()), "mdantic", 100
-        )
+        md.preprocessors.register(MdanticPreprocessor(md, self.getConfigs()), "mdantic", 100)
 
 
 Field = namedtuple("Field", "key type required description default")
@@ -52,7 +50,8 @@ def analyze(cls_name: str) -> Optional[Dict[str, List[Field]]]:
 
     cls = getattr(mod, attr)
 
-    assert issubclass(cls, BaseModel)
+    if not issubclass(cls, BaseModel):
+        return None
 
     structs = {}
     mk_struct(cls, structs)
@@ -151,9 +150,7 @@ class MdanticPreprocessor(Preprocessor):
                 cls_name = g.group(1)
                 structs = analyze(cls_name)
                 if structs is None:
-                    print(
-                        f"warning: mdantic pattern detected but failed to process or import: {cls_name}"
-                    )
+                    print(f"warning: mdantic pattern detected but failed to process or import: {cls_name}")
                     continue
                 tabs = fmt_tab(structs, self.columns)
                 table_str = ""
