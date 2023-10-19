@@ -52,7 +52,7 @@ python's site-packages directory (mdantic.py) so now we should use the name
 
 Each reference must be in one line, starts with `$pydantic: ` (notice the
 single space after the colon), following the model import path which looks
-lik `a.b.c.D` where `D` is the model class itself (which is subclass of `BaseModel`).
+like `a.b.c.D` where `D` is the model class itself (which is subclass of `BaseModel`).
 
 ```markdown
 **params**:
