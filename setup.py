@@ -2,14 +2,14 @@ from setuptools import setup
 
 setup(
     name="markdown-mdantic",
-    version="2.1.0",
+    version="2.1.1",
     author="Xiangyu Zhu",
     author_email="frefreak.zxy@gmail.com",
     description="Python-Markdown extension for rendering pydantic BaseModel as table",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/frefreak/mdantic",
-    py_modules=["mdantic"],
+    packages=["mdantic"],
     install_requires=["markdown >= 3.0", "tabulate", "pydantic >= 2.0"],
     classifiers=[
         # How mature is this project? Common values are
